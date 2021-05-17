@@ -16,7 +16,7 @@ app.use(express.json())
 //register our router with app
 app.use(userRouter)
 
-//register our router with app
+//register our router
 app.use(taskRouter)
 
 
