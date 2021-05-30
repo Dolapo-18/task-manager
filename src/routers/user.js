@@ -1,6 +1,7 @@
 const express = require('express')
 const router = new express.Router()
 
+const auth = require('../middleware/auth')
 const User = require('../models/user')
 
 router.post('/users', async (req, res) => {
@@ -8,7 +9,10 @@ router.post('/users', async (req, res) => {
 
     try {
         await user.save()
-        res.status(201).send(user)
+
+        //generate token for newly created user
+        const token = await user.generateAuthToken()
+        res.status(201).send({ user, token })
 
     } catch (e) {
         res.status(400).send(e)
@@ -18,54 +22,62 @@ router.post('/users', async (req, res) => {
 })
 
 //login router
-router.post('/users/login', (req, res) => {
+router.post('/users/login', async (req, res) => {
     try {
-        const user = User.findByCredentials(req.body.email, req.body.password)
+        const user = await User.findByCredentials(req.body.email, req.body.password)
+        //generate token
+        const token  = await user.generateAuthToken()
         if (!user) {
             res.status(404).send('User not Found :(')
         }
+        
         //console.log(user)
-        res.send(user)
+        res.send({ user, token })
+
+    } catch (error) {
+        res.status(404).send({ error: 'Unable to Login :(' })
+    }
+})
+
+//logout router
+//logout user from only a device
+router.post('/users/logout', auth, async (req, res) => {
+    try {
+        //return false
+        req.user.tokens = req.user.tokens.filter((token) => token.token !== req.token)
+        await req.user.save()
+
+        res.send('Logged Out Successfully :)')
 
     } catch (e) {
-        res.status(400).send(e)
+        res.status(500).send()
+    }
+})
+
+//logout router
+//logout from all devices
+router.post('/users/logoutAll', auth, async (req, res) => {
+    try {
+        req.user.tokens = []
+
+        await req.user.save()
+        res.send('All devices logged Out')
+
+    } catch (e) {
+        res.status(500).send()
     }
 })
 
 //route to fetch all users
-router.get('/users', async (req, res) => {
+router.get('/users/me', auth, async (req, res) => {
 
-    try {
-        const users = await User.find({})
-        res.status(200).send(users)
-
-    } catch (e) {
-        res.status(500).send(e)
-
-    }
+    res.send(req.user)
 
 })
 
-//route to fetch only a user by ID
-router.get('/users/:id', async (req, res) => {
-    const _id = req.params.id
-
-    try {
-        const user = await User.findById(_id)
-        if (!user) {
-            return res.status(404).send('User not found :(')
-        }
-
-        res.status(200).send(user)
-
-    } catch (e) {
-        res.status(500).send('Server Error!!!')
-    }
-
-})
 
 ///Update user
-router.patch('/users/:id', async (req, res) => {
+router.patch('/users/me', auth, async (req, res) => {
     //Ensuring only available fields are being updated, else throw a 404 error
     const updates = Object.keys(req.body)
     const allowedUpdates = ['name', 'email', 'password', 'age']
@@ -77,17 +89,9 @@ router.patch('/users/:id', async (req, res) => {
     }
 
     try {
-        // const user = await User.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true})
-        const user = await User.findById(req.params.id)
-        updates.forEach((update) => user[update] = req.body[update])
-
-        await user.save()
-
-        if (!user) {
-            res.status(404).send()
-
-        }
-        res.status(200).send(user)
+        updates.forEach((update) => req.user[update] = req.body[update])
+        await req.user.save()
+        res.status(200).send(req.user)
 
     } catch (e) {
         res.status(400).send()
@@ -95,14 +99,10 @@ router.patch('/users/:id', async (req, res) => {
 })
 
 //Delete user
-router.delete('/users/:id', async (req, res) => {
+router.delete('/users/me', auth, async (req, res) => {
     try {
-        const user = await User.findByIdAndDelete(req.params.id)
-        if (!user) {
-            res.status(404).send({ error: 'User not found'})
-
-        }
-        res.status(200).send(user)
+        await req.user.remove()
+        res.status(200).send(req.user)
 
     } catch (e) {
         res.status(500).send(e)
