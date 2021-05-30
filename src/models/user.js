@@ -53,6 +53,9 @@ const userSchema = new mongoose.Schema({
             required: true
         }
     }]
+},
+{
+    timestamps: true
 })
 
 //lets mongoose determine how User schema is related to Task schema

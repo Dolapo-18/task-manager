@@ -68,7 +68,7 @@ router.post('/users/logoutAll', auth, async (req, res) => {
     }
 })
 
-//route to fetch all users
+//route to fetch my profile
 router.get('/users/me', auth, async (req, res) => {
 
     res.send(req.user)
