@@ -1,3 +1,7 @@
+//Question to type on Udemy to see how to hook the back end to a front end
+//Adam Hartleb
+//How do I hook up the task-manager API's authentication to a frontend?
+
 const express = require('express')
 require('./db/mongoose')
 
@@ -8,7 +12,7 @@ const userRouter = require('./routers/user')
 const taskRouter = require('./routers/task')
 
 const app = express()
-const port = process.env.PORT || 3000
+const port = process.env.PORT
 
 
 //configure express to parse incoming json
